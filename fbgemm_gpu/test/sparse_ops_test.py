@@ -38,7 +38,7 @@ except Exception:
     torch.ops.load_library("//deeplearning/fbgemm/fbgemm_gpu:sparse_ops")
     torch.ops.load_library("//deeplearning/fbgemm/fbgemm_gpu:sparse_ops_cpu")
     torch.ops.load_library("//deeplearning/fbgemm/fbgemm_gpu/codegen:index_select_ops")
-    import fbgemm_gpu.sparse_operators  # noqa: F401, E402
+    import fbgemm_gpu.sparse_ops  # noqa: F401, E402
     from fbgemm_gpu.test.test_utils import gpu_available, gpu_unavailable, skipIfRocm
 
 suppressed_list: List[HealthCheck] = (
@@ -1114,7 +1114,7 @@ class SparseOpsTest(unittest.TestCase):
         T=st.integers(min_value=1, max_value=20),
         L=st.integers(min_value=2, max_value=20),
         A=st.integers(min_value=1, max_value=20),
-        Dtype=st.sampled_from([torch.int32, torch.float, torch.int64]),
+        Dtype=st.sampled_from([torch.int32, torch.float, torch.int64, torch.bfloat16]),
         Itype=st.sampled_from([torch.int32, torch.int64]),
         broadcast_indices=st.booleans(),
     )
