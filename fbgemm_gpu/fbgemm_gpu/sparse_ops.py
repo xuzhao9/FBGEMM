@@ -7,9 +7,9 @@
 from typing import Callable, List, Optional, Tuple
 
 import torch
+
 from fbgemm_gpu.split_embedding_configs import SparseType
 from fbgemm_gpu.split_table_batched_embeddings_ops_common import PoolingMode
-from torch import Tensor
 
 try:
     # pyre-ignore
@@ -23,6 +23,8 @@ except Exception:
     )
     torch.ops.load_library("//deeplearning/fbgemm/fbgemm_gpu/codegen:embedding_ops")
     torch.ops.load_library("//deeplearning/fbgemm/fbgemm_gpu/codegen:embedding_ops_cpu")
+
+from torch import Tensor
 
 
 if hasattr(torch.library, "impl_abstract"):
@@ -228,12 +230,12 @@ def merge_pooled_embeddings(
     if cat_dim == 0:
         return e.new_empty(
             [total_cat_dim_size, e.size(1)],
-            device=torch.device("meta"),
+            device=target_device,
         )
 
     return e.new_empty(
         [e.size(0), total_cat_dim_size],
-        device=torch.device("meta"),
+        device=target_device,
     )
 
 
