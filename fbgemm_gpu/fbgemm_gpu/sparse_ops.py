@@ -23,6 +23,8 @@ except Exception:
     )
     torch.ops.load_library("//deeplearning/fbgemm/fbgemm_gpu/codegen:embedding_ops")
     torch.ops.load_library("//deeplearning/fbgemm/fbgemm_gpu/codegen:embedding_ops_cpu")
+    torch.ops.load_library("//deeplearning/fbgemm/fbgemm_gpu:input_combine")
+    torch.ops.load_library("//deeplearning/fbgemm/fbgemm_gpu:input_combine_cpu")
 
 from torch import Tensor
 
@@ -94,6 +96,59 @@ def permute_1D_sparse_data_meta(
         # pyre-fixme
         permuted_weights = weights.new_empty(permuted_indices_size)
     return permuted_lengths, permuted_indices, permuted_weights
+
+
+@impl_abstract("fbgemm::masked_select_jagged_1d")
+def masked_select_jagged_1d(
+    values: Tensor, lengths: Tensor, mask: Tensor
+) -> Tuple[Tensor, Tensor]:
+    torch._check(values.dim() == 1)
+    torch._check(lengths.dim() == 1)
+    torch._check(values.device == lengths.device)
+    torch._check(values.device == mask.device)
+
+    s0 = torch.library.get_ctx().new_dynamic_size()
+    masked_values = values.new_empty([s0])
+    masked_lengths = torch.empty_like(lengths)
+    return masked_values, masked_lengths
+
+
+@impl_abstract("fbgemm::tbe_input_combine")
+def tbe_input_combine_abstract(
+    indices_list: List[Tensor],
+    offsets_list: List[Tensor],
+    per_sample_weights: List[Tensor],
+    include_last_offsets: Tensor,
+) -> Tuple[Tensor, Tensor, Tensor]:
+    torch._check(len(indices_list) > 0)
+    torch._check(len(indices_list) == len(offsets_list))
+    torch._check(len(indices_list) == len(per_sample_weights))
+    torch._check(len(indices_list) == include_last_offsets.numel())
+    total_indices = 0
+    need_weight = False
+    for index, offset, weight in zip(indices_list, offsets_list, per_sample_weights):
+        torch._check(index.dtype == torch.int or index.dtype == torch.long)
+        torch._check(offset.dtype == torch.int or offset.dtype == torch.long)
+        torch._check(index.dim() == 1)
+        torch._check(offset.dim() == 1)
+        torch._check(index.is_contiguous())
+        torch._check(offset.is_contiguous())
+        total_indices = total_indices + index.numel()
+        if weight.numel() > 0:
+            torch._check(weight.dim() == 1)
+            torch._check(weight.numel() == index.numel())
+            torch._check(weight.is_contiguous())
+            need_weight = True
+    total_offsets = torch.library.get_ctx().new_dynamic_size()
+    combined_indices = indices_list[0].new_empty([total_indices], dtype=torch.int)
+    combined_offsets = offsets_list[0].new_empty([total_offsets], dtype=torch.int)
+    if need_weight:
+        combined_weights = per_sample_weights[0].new_empty(
+            [total_indices], dtype=torch.float
+        )
+    else:
+        combined_weights = torch.empty(0)
+    return combined_indices, combined_offsets, combined_weights
 
 
 @impl_abstract("fbgemm::expand_into_jagged_permute")

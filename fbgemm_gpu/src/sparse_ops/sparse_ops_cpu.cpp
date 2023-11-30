@@ -306,7 +306,8 @@ void _block_bucketize_sparse_features_cpu(
   const index_t* const block_sizes_data = block_sizes.data_ptr<index_t>();
   offset_t* batch_sizes_data = nullptr;
   const auto variable_batch_size = batch_size_per_feature.has_value();
-  const auto variable_bucket_sizes = block_bucketize_pos.has_value();
+  const auto variable_bucket_sizes = block_bucketize_pos.has_value() &&
+      block_bucketize_pos.value().size() != 0;
   using uindex_t = std::make_unsigned_t<index_t>;
   using uoffset_t = std::make_unsigned_t<offset_t>;
   std::vector<int64_t> lower_bounds(indices.numel(), 0);
@@ -2729,12 +2730,15 @@ TORCH_LIBRARY_FRAGMENT(fbgemm, m) {
   m.def(
       "permute_sparse_data(Tensor permute, Tensor lengths, Tensor values, Tensor? weights=None, SymInt? permuted_lengths_sum=None) -> (Tensor, Tensor, Tensor?)");
   m.def(
-      "permute_2D_sparse_data(Tensor permute, Tensor lengths, Tensor values, Tensor? weights=None, SymInt? permuted_lengths_sum=None) -> (Tensor, Tensor, Tensor?)");
+      "permute_2D_sparse_data(Tensor permute, Tensor lengths, Tensor values, Tensor? weights=None, SymInt? permuted_lengths_sum=None) -> (Tensor, Tensor, Tensor?)",
+      {PT2_COMPLIANT_TAG});
   m.def(
-      "permute_1D_sparse_data(Tensor permute, Tensor lengths, Tensor values, Tensor? weights=None, SymInt? permuted_lengths_sum=None) -> (Tensor, Tensor, Tensor?)");
+      "permute_1D_sparse_data(Tensor permute, Tensor lengths, Tensor values, Tensor? weights=None, SymInt? permuted_lengths_sum=None) -> (Tensor, Tensor, Tensor?)",
+      {PT2_COMPLIANT_TAG});
   m.def("invert_permute(Tensor permute) -> Tensor");
   m.def(
-      "expand_into_jagged_permute(Tensor permute, Tensor input_offset, Tensor output_offset, SymInt output_size) -> Tensor");
+      "expand_into_jagged_permute(Tensor permute, Tensor input_offset, Tensor output_offset, SymInt output_size) -> Tensor",
+      {PT2_COMPLIANT_TAG});
   m.def(
       "block_bucketize_sparse_features(Tensor lengths, Tensor indices, bool bucketize_pos, bool sequence, Tensor block_sizes, SymInt my_size, Tensor? weights=None, Tensor? batch_size_per_feature=None, SymInt max_B= -1, Tensor[]? block_bucketize_pos=None) -> (Tensor, Tensor, Tensor?, Tensor?, Tensor?)");
   m.def(
